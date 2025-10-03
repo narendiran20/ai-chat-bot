@@ -52,12 +52,32 @@ const Dashboard = () => {
       .from("profiles")
       .select("tokens")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Failed to load tokens:", error);
+      toast.error("Failed to load token balance");
+    } else if (!data) {
+      // Profile doesn't exist, create it
+      const { data: newProfile, error: createError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: user.id,
+          email: user.email,
+          tokens: 10000
+        })
+        .select("tokens")
+        .single();
+      
+      if (createError) {
+        console.error("Failed to create profile:", createError);
+        toast.error("Failed to initialize profile");
+      } else {
+        setTokensRemaining(newProfile?.tokens || 10000);
+        toast.success("Welcome! You have 10,000 tokens to get started.");
+      }
     } else {
-      setTokensRemaining(data?.tokens || 0);
+      setTokensRemaining(data.tokens || 0);
     }
   };
 
