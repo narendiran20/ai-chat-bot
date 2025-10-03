@@ -103,24 +103,38 @@ serve(async (req) => {
       );
     }
 
-    // Calculate token cost and deduct atomically
+    // Check and deduct tokens
     const trimmedMessage = message.trim();
     const wordCount = trimmedMessage.split(/\s+/).length;
 
-    // Use atomic decrement to prevent race conditions
-    const { data: newBalance, error: tokenError } = await supabase
-      .rpc("decrement_tokens", {
-        _user_id: user.id,
-        _amount: wordCount
-      });
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("tokens")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error("Profile lookup error:", profileError);
+      return new Response(
+        JSON.stringify({ error: "Unable to verify account" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (profile.tokens < wordCount) {
+      return new Response(
+        JSON.stringify({ error: "Insufficient tokens. Please upgrade your account." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Deduct tokens
+    const { error: tokenError } = await supabase
+      .from("profiles")
+      .update({ tokens: profile.tokens - wordCount })
+      .eq("user_id", user.id);
 
     if (tokenError) {
-      if (tokenError.message === "Insufficient tokens") {
-        return new Response(
-          JSON.stringify({ error: "Insufficient tokens. Please upgrade your account." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       console.error("Token deduction error:", tokenError);
       return new Response(
         JSON.stringify({ error: "Unable to process request" }),
@@ -190,19 +204,16 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     const assistantMessage = aiData.choices[0].message.content;
 
-    // Count AI response words and deduct additional tokens atomically
+    // Count AI response words and deduct additional tokens
     const aiWordCount = assistantMessage.trim().split(/\s+/).length;
-    const { data: finalBalance, error: aiTokenError } = await supabase
-      .rpc("decrement_tokens", {
-        _user_id: user.id,
-        _amount: aiWordCount
-      });
+    const { error: aiTokenError } = await supabase
+      .from("profiles")
+      .update({ tokens: profile.tokens - wordCount - aiWordCount })
+      .eq("user_id", user.id);
 
     if (aiTokenError) {
       console.error("AI token deduction error:", aiTokenError);
     }
-
-    const tokensRemaining = finalBalance !== null ? finalBalance : newBalance - aiWordCount;
 
     // Save assistant message to database
     const { error: saveError } = await supabase
@@ -224,7 +235,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         message: assistantMessage,
-        tokensRemaining
+        tokensRemaining: profile.tokens - wordCount - aiWordCount
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
