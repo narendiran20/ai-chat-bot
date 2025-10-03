@@ -63,15 +63,19 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-subtle)" }}>
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
-              <Sparkles className="w-6 h-6 text-primary-foreground" />
+      <Card className="w-full max-w-md shadow-lg border-0" style={{ background: "rgba(255, 255, 255, 0.95)" }}>
+        <CardHeader className="space-y-3 text-center pt-8">
+          <div className="flex justify-center mb-2">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
+              <Sparkles className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-          <CardDescription>Get started with your AI assistant</CardDescription>
+          <CardTitle className="text-3xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: "var(--gradient-primary)" }}>
+            Million Game AI
+          </CardTitle>
+          <CardDescription className="text-base font-medium">
+            Sign up to start chatting with 10,000 free words!
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4">
