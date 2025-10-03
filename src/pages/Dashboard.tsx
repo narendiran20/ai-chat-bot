@@ -30,6 +30,7 @@ const Dashboard = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [tokensRemaining, setTokensRemaining] = useState<number>(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -40,8 +41,25 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       loadConversations();
+      loadTokens();
     }
   }, [user]);
+
+  const loadTokens = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("tokens")
+      .eq("user_id", user.id)
+      .single();
+
+    if (error) {
+      console.error("Failed to load tokens:", error);
+    } else {
+      setTokensRemaining(data?.tokens || 0);
+    }
+  };
 
   useEffect(() => {
     if (currentConversationId) {
@@ -141,6 +159,11 @@ const Dashboard = () => {
 
       if (aiError) throw aiError;
 
+      // Update tokens
+      if (aiResponse.tokensRemaining !== undefined) {
+        setTokensRemaining(aiResponse.tokensRemaining);
+      }
+
       // Add AI response to UI
       const aiMessage: Message = {
         id: crypto.randomUUID(),
@@ -204,7 +227,11 @@ const Dashboard = () => {
             ))}
           </div>
         </ScrollArea>
-        <div className="p-4 border-t">
+        <div className="p-4 border-t space-y-2">
+          <div className="px-3 py-2 rounded-lg bg-sidebar-accent/50">
+            <p className="text-xs text-muted-foreground">Tokens Remaining</p>
+            <p className="text-lg font-semibold">{tokensRemaining.toLocaleString()}</p>
+          </div>
           <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start">
             <LogOut className="w-4 h-4 mr-2" />
             Sign out
