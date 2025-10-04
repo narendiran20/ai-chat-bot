@@ -52,12 +52,20 @@ const Dashboard = () => {
       .from("profiles")
       .select("tokens")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Failed to load tokens:", error);
+    } else if (!data) {
+      // Create profile if it doesn't exist
+      const { data: newProfile } = await supabase
+        .from("profiles")
+        .insert({ user_id: user.id, email: user.email, tokens: 10000 })
+        .select("tokens")
+        .single();
+      setTokensRemaining(newProfile?.tokens || 10000);
     } else {
-      setTokensRemaining(data?.tokens || 0);
+      setTokensRemaining(data.tokens);
     }
   };
 

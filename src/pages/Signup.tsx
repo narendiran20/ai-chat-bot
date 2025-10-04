@@ -8,6 +8,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { z } from "zod";
+
+const signupSchema = z.object({
+  email: z.string().trim().email("Invalid email address").max(255),
+  password: z.string().min(6, "Password must be at least 6 characters").max(100),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -26,18 +36,15 @@ const Signup = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password || !confirmPassword) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error("Passwords don't match");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    // Validate input
+    const validation = signupSchema.safeParse({ 
+      email: email.trim(), 
+      password, 
+      confirmPassword 
+    });
+    
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
       return;
     }
 
@@ -45,8 +52,8 @@ const Signup = () => {
     const redirectUrl = `${window.location.origin}/dashboard`;
     
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: validation.data.email,
+      password: validation.data.password,
       options: {
         emailRedirectTo: redirectUrl
       }
