@@ -75,20 +75,19 @@ const Login = () => {
 
       if (error) throw error;
 
-      // Sign in with email (passwordless)
-      const { error: signInError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-      });
+      // Set session with the tokens returned from backend
+      if (data.access_token && data.refresh_token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
 
-      if (signInError) {
-        // Fallback: Try to sign in with a temporary session
-        toast.success("Verified! Redirecting...");
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1000);
-      } else {
+        if (sessionError) throw sessionError;
+
         toast.success("Successfully verified!");
         navigate("/dashboard");
+      } else {
+        throw new Error("Invalid session data received");
       }
     } catch (error: any) {
       toast.error(error.message || "Invalid verification code");
