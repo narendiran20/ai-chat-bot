@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,13 +42,7 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: validation.data.email,
-        password: validation.data.password,
-      });
-
-      if (error) throw error;
-
+      await signInWithEmailAndPassword(auth, validation.data.email, validation.data.password);
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (error: any) {
@@ -68,16 +63,7 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: validation.data.email,
-        password: validation.data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-        },
-      });
-
-      if (error) throw error;
-
+      await createUserWithEmailAndPassword(auth, validation.data.email, validation.data.password);
       toast.success("Account created! You can now sign in.");
       navigate("/dashboard");
     } catch (error: any) {
@@ -90,14 +76,10 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-        },
-      });
-
-      if (error) throw error;
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      toast.success("Signed in with Google!");
+      navigate("/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
       setLoading(false);
